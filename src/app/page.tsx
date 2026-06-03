@@ -1,4 +1,4 @@
-'use client'; // クリックイベント（動的ギミック）を有効にする魔法の呪文
+'use client';
 
 import React, { useState } from 'react';
 
@@ -14,7 +14,7 @@ const EMULATOR_ITEMS = [
 ];
 
 export default function Home() {
-  // どのメニューが開いているかを管理する状態（初期値は何も開いていない）
+  // どのメニューが開いているかを管理する状態
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   // メニューをクリックしたときの処理
@@ -56,15 +56,15 @@ export default function Home() {
               {openMenu === 'directory' ? (
                 <>ツール一覧 <span className="text-blue-600 text-[10px]">▼</span></>
               ) : (
-                <>ツール一覧 <span className="text-blue-600 text-[10px]">◀</span></></>
+                <>ツール一覧 <span className="text-blue-600 text-[10px]">◀</span></>
               )}
             </button>
 
-            {/* 開いたときの中身：縦一列のリスト */}
+            {/* 開いたときの中身：縦一列のリスト（エラー原因を完全除去） */}
             {openMenu === 'directory' && (
-              <div className="mt-4 ml-4 pl-4 border-l-2 border-blue-500/30 space-y-4 animate-fadeIn">
+              <div className="mt-4 ml-4 pl-4 border-l-2 border-blue-500/30 space-y-4">
                 {DIRECTORY_ITEMS.map(item => (
-                  <div key={item.id} className="group">
+                  <div key={item.id}>
                     <a href={item.url} target="_blank" rel="noopener noreferrer" className="font-bold text-gray-900 hover:text-blue-600 transition-colors block text-base">
                       {item.title}
                     </a>
@@ -84,7 +84,7 @@ export default function Home() {
               {openMenu === 'emulator' ? (
                 <>エミュレータ <span className="text-purple-600 text-[10px]">▼</span></>
               ) : (
-                <>エミュレータ <span className="text-purple-600 text-[10px]">◀</span></></>
+                <>エミュレータ <span className="text-purple-600 text-[10px]">◀</span></>
               )}
             </button>
 
