@@ -1,5 +1,6 @@
 import React from 'react';
 
+// 表示するデータ（文法エラーを修正）
 const ITEMS = [
   {
     id: "1",
@@ -11,11 +12,11 @@ const ITEMS = [
   },
   {
     id: "2",
-    title": "技術系コミュニティサーバー",
-    description": "進捗報告や技術的な質問、情報共有ができるDiscordサーバー。",
-    category": "Discord",
+    title: "技術系コミュニティサーバー",
+    description: "進捗報告や技術的な質問、情報共有ができるDiscordサーバー。",
+    category: "Discord",
     tags: ["Minecraft", "開発"],
-    url": "https://discord.gg"
+    url: "https://discord.gg"
   }
 ];
 
@@ -23,11 +24,15 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-5xl mx-auto">
+        
+        {/* ヘッダー */}
         <header className="mb-12 text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">便利ツール & Discordサーバー まとめ</h1>
           <p className="text-gray-600">お気に入りのツールやコミュニティを一覧化</p>
         </header>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {/* 縦一列のリストレイアウト（横幅を読みやすく中央寄せに最適化） */}
+        <div className="flex flex-col gap-4 max-w-3xl mx-auto">
           {ITEMS.map((item) => (
             <div key={item.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-between">
               <div>
@@ -44,12 +49,18 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-              <a href={item.url} target="_blank" rel="noopener noreferrer" className="w-full text-center bg-gray-900 hover:bg-gray-800 text-white font-medium py-2 rounded-lg text-sm transition-colors">
+              <a 
+                href={item.url} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="w-full text-center bg-gray-900 hover:bg-gray-800 text-white font-medium py-2 rounded-lg text-sm transition-colors"
+              >
                 リンクを開く
               </a>
             </div>
           ))}
         </div>
+
       </div>
     </main>
   );
