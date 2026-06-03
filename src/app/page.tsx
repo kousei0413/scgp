@@ -1,66 +1,78 @@
 import React from 'react';
 
-// 表示するデータ（文法エラーを修正）
-const ITEMS = [
+const FEATURES = [
   {
-    id: "1",
-    title: "VRChatアバター最適化ツール",
-    description: "ポリゴン数やボーン構造を自動でチェックし、負荷を軽減するツール。",
-    category: "ツール",
-    tags: ["VRChat", "Unity"],
-    url: "https://example.com"
+    title: "便利ツール & Discord一覧",
+    description: "VRChat、Unity、Minecraftなどの開発に役立つツールやコミュニティを瞬時に検索・閲覧できるディレクトリ。",
+    path: "/directory",
+    status: "Available",
+    color: "border-blue-500/30 hover:border-blue-500"
   },
   {
-    id: "2",
-    title: "技術系コミュニティサーバー",
-    description: "進捗報告や技術的な質問、情報共有ができるDiscordサーバー。",
-    category: "Discord",
-    tags: ["Minecraft", "開発"],
-    url: "https://discord.gg"
+    title: "Webエミュレータ部屋",
+    description: "EmulatorJSを内蔵し、ブラウザ上で直接レトロゲームの動作テストやプレイができる専用モジュール。",
+    path: "/emulator",
+    status: "Developing",
+    color: "border-purple-500/30 hover:border-purple-500"
+  },
+  {
+    title: "スクリプト / 技術ドキュメント",
+    description: "C#やNode.jsによるネットワーク解析、自動化スクリプトなどの技術備忘録・開発ログ。",
+    path: "/docs",
+    status: "Planning",
+    color: "border-emerald-500/30 hover:border-emerald-500"
   }
 ];
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-5xl mx-auto">
-        
-        {/* ヘッダー */}
-        <header className="mb-12 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">便利ツール & Discordサーバー まとめ</h1>
-          <p className="text-gray-600">お気に入りのツールやコミュニティを一覧化</p>
-        </header>
+    <main className="min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center px-4 relative overflow-hidden">
+      
+      {/* 背景のうっすらとした光の演出（Tailwind） */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
 
-        {/* 縦一列のリストレイアウト（横幅を読みやすく中央寄せに最適化） */}
-        <div className="flex flex-col gap-4 max-w-3xl mx-auto">
-          {ITEMS.map((item) => (
-            <div key={item.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-between">
-              <div>
-                <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full mb-3">
-                  {item.category}
+      <div className="max-w-4xl w-full text-center relative z-10 py-12">
+        {/* ヒーローセクション */}
+        <span className="text-xs font-bold tracking-widest text-blue-400 uppercase px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/20">
+          Next-Gen Portal Project
+        </span>
+        <h1 className="text-4xl sm:text-6xl font-extrabold text-white mt-4 mb-6 tracking-tight">
+          すべてのツールと、<br className="sm:hidden" />
+          <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            コアな技術をここに集約。
+          </span>
+        </h1>
+        <p className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
+          EmulatorJSの思想を受け継いだ、ブラウザ完結型の総合開発ハブ。データ管理、エミュレーション、コミュニティの導線を1つに。
+        </p>
+
+        {/* 主要機能へのナビゲーション（グリッド） */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+          {FEATURES.map((feat) => (
+            <a
+              key={feat.title}
+              href={feat.path}
+              className={`block p-6 bg-gray-900/40 backdrop-blur rounded-2xl border transition-all duration-300 group ${feat.color}`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                  feat.status === 'Available' ? 'bg-blue-500/20 text-blue-300' :
+                  feat.status === 'Developing' ? 'bg-purple-500/20 text-purple-300' :
+                  'bg-gray-800 text-gray-400'
+                }`}>
+                  {feat.status}
                 </span>
-                <h2 className="text-xl font-bold text-gray-800 mb-2">{item.title}</h2>
-                <p className="text-gray-600 text-sm mb-4">{item.description}</p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {item.tags.map((tag) => (
-                    <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
+                <span className="text-gray-500 group-hover:text-white transition-colors">→</span>
               </div>
-              <a 
-                href={item.url} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="w-full text-center bg-gray-900 hover:bg-gray-800 text-white font-medium py-2 rounded-lg text-sm transition-colors"
-              >
-                リンクを開く
-              </a>
-            </div>
+              <h2 className="text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">
+                {feat.title}
+              </h2>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                {feat.description}
+              </p>
+            </a>
           ))}
         </div>
-
       </div>
     </main>
   );
