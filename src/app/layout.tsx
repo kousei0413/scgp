@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Expancoov group",
   description: "総合開発・コミュニティプラットフォーム",
+  icons: "app/icon.png", 
 };
 
 export default function RootLayout({
