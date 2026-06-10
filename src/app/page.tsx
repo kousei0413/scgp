@@ -68,7 +68,7 @@ export default function Home() {
         {/* 🧭 左サイドバー（指定通り bg-red-600。ホバー時のグレー化を阻止して赤系に変更） */}
         <aside className="w-40 bg-red-600 text-yellow-200 p-6 flex flex-col gap-2 border-r border-yellow-200 min-h-[calc(100vh-4rem)]">
           <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">test</div>
-          <a href="/test" className="p-2 rounded hover:bg-red-500 transition">🧪 ramuneとは</a>
+          <a href="/test" className="p-2 rounded hover:bg-red-500 transition">ramuneとは</a>
           <a href="/test" className="p-2 rounded hover:bg-red-500 transition">🧪 test</a>
           <a href="/test" className="p-2 rounded hover:bg-red-500 transition">🧪 test</a>
         </aside>
