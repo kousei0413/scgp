@@ -42,7 +42,7 @@ export default function RootLayout({
           <aside className="w-40 bg-red-600 text-yellow-200 p-6 flex flex-col gap-2 border-r border-yellow-200 min-h-[calc(100vh-4rem)]">
             <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">test</div>
             {/* 🔗 飛ばす先URLは href="..." の中でそれぞれ設定 */}
-            <a href="/ramune" className="p-2 rounded hover:bg-red-500 transition">ramuneとは</a>
+            <a href="/whatsramune" className="p-2 rounded hover:bg-red-500 transition">ramuneとは</a>
             <a href="/test2" className="p-2 rounded hover:bg-red-500 transition">🧪 test</a>
             <a href="/test3" className="p-2 rounded hover:bg-red-500 transition">🧪 test</a>
           </aside>
