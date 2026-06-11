@@ -29,7 +29,7 @@ export default function Home() {
         
         <p className="text-gray-500 text-sm sm:text-base max-w-xl leading-relaxed font-medium">
           【お知らせ】<br />
-          ramuneがocasanをtoしました。
+          ramuneがochasanをtoしました。
         </p>
       </div>
 
