@@ -13,17 +13,20 @@ export default function Home() {
         </div>
         
         <h1 className="text-4xl sm:text-6xl font-black text-gray-950 tracking-tight leading-tight">
-          SCGP、<br />
+          SCGP、開発進捗<br />
         </h1>
         
         <p className="text-gray-500 text-sm sm:text-base max-w-xl leading-relaxed font-medium">
-          node.jsなどを用いたコードを開発、shadowcompnyaddonのガンパックを開発している組織です
+          モーゼルc96モデル
         </p>
+        <img 
+  src="/c96.png" 
+  alt="モーゼルc96" 
+  className="w-[300px] h-auto rounded-lg shadow-md" />
         
         <p className="text-gray-500 text-sm sm:text-base max-w-xl leading-relaxed font-medium">
-          【お知らせ】<br />
-          ガンパックをスキンパックだと一部の人が誤解しているようです、<br />
-          ガンパックはscaddonに新たな銃機を追加するもので、スキンパックはまた別のものです。
+          <br />
+          
         </p>
       </div>
 
