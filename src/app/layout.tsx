@@ -55,7 +55,8 @@ export default function RootLayout({
             <div className="text-xs font-bold text-red-300 uppercase tracking-wider mb-2">test</div>
             <a href="/whatsramune" className="p-2 rounded hover:bg-red-500 transition text-sm">ramuneとは</a>
             <a href="/ejses" className="p-2 rounded hover:bg-red-500 transition text-sm">ejses</a>
-            <a href="/test" className="p-2 rounded hover:bg-red-500 transition text-sm">🧪 test</a>
+            <a href="/DevelopmentProgress" className="p-2 rounded hover:bg-red-500 transition text-sm">DevelopmentProgress</a>
+            <a href="/test" className="p-2 rounded hover:bg-red-500 transition text-sm">test</a>
           </aside>
 
           {/* 📝 メインコンテンツ */}
