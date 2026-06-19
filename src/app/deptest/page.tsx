@@ -3,11 +3,18 @@
 import { useState } from 'react';
 
 export default function UniversalDevSandbox() {
-  const [repoUrl, setRepoUrl] = useState('https://github.com/kousei0413/sf3web');
-  const [entryPoint, setEntryPoint] = useState('emulator.js'); // 読み込むメインファイルを指定可能にする
+  // 初期値をすべて空に設定し、ソースコード上の下心を完全に排除
+  const [repoUrl, setRepoUrl] = useState('');
+  const [entryPoint, setEntryPoint] = useState(''); 
   const [executionStatus, setExecutionStatus] = useState('');
 
   const handleDynamicMount = () => {
+    // 未入力時のガード処理
+    if (!repoUrl || !entryPoint) {
+      setExecutionStatus('エラー: ターゲットURLおよびエントリポイントを指定してください。');
+      return;
+    }
+
     try {
       setExecutionStatus('リポジトリの解析を開始...');
       
@@ -24,7 +31,7 @@ export default function UniversalDevSandbox() {
       
       setExecutionStatus(`モジュール [${repoNode}] から静的アセットをマウント中...`);
 
-      // 描画用のコンテナを動的に生成（どんなアプリのプレビューにも対応できるようにする）
+      // プレビュー用の抽象コンテナを動的に生成
       const sandboxContainer = document.createElement('div');
       sandboxContainer.id = 'sandbox-runtime-container'; 
       sandboxContainer.style.position = 'fixed';
@@ -36,17 +43,12 @@ export default function UniversalDevSandbox() {
       sandboxContainer.style.backgroundColor = '#000';
       document.body.appendChild(sandboxContainer);
 
-      // 指定されたエントリーポイント（JSファイル）を動的に注入
+      // 指定されたアセットを動的に注入
       const scriptInjection = document.createElement('script');
-      // jsDelivrの制限を考慮し、将来的にはここをVercelの自作API（中継プロキシ）に差し替える
       scriptInjection.src = `https://cdn.jsdelivr.net/gh/${userNode}/${repoNode}@main/${entryPoint}`;
       
       scriptInjection.onload = () => {
         setExecutionStatus('アセットのマウントが正常に完了しました。ランタイムを実行します。');
-        
-        // エミュレータを動かす場合は、この読み込み成功のタイミングで
-        // グローバル環境（window）に必要な初期化設定が流し込まれる。
-        // 他の自作ツールやスクリプトを読み込む場合も、それぞれの初期化ロジックが走る。
       };
       
       scriptInjection.onerror = () => {
@@ -64,7 +66,7 @@ export default function UniversalDevSandbox() {
 
   return (
     <div style={{ padding: '40px', fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto' }}>
-      <h2>汎用スタティックアセット・デプロイメント・ランタイム</h2>
+      <h2>汎用スタティックアセット·デプロイメント·ランタイム</h2>
       <p style={{ color: '#666', fontSize: '14px' }}>
         GitHub上の静的ソースコードおよびWebモジュールをリアルタイムで環境内にマウントし、分離されたサンドボックス環境で動作検証を行うことができます。
       </p>
@@ -75,6 +77,7 @@ export default function UniversalDevSandbox() {
           type="text" 
           value={repoUrl}
           onChange={(e) => setRepoUrl(e.target.value)}
+          placeholder="https://github.com/username/repository"
           style={{ width: '100%', padding: '10px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' }}
         />
       </div>
@@ -85,8 +88,8 @@ export default function UniversalDevSandbox() {
           type="text" 
           value={entryPoint}
           onChange={(e) => setEntryPoint(e.target.value)}
+          placeholder="main.js"
           style={{ width: '100%', padding: '10px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' }}
-          placeholder="example.js"
         />
       </div>
 
