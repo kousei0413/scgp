@@ -1,32 +1,96 @@
-'use client';
+import { useState } from 'react';
 
-import React from 'react';
+export default function DevSandboxPortal() {
+  const [targetSourceUrl, setTargetSourceUrl] = useState('https://github.com/kousei0413/sf3web');
+  const [executionStatus, setExecutionStatus] = useState('');
 
-export default function Home() {
-  return (
-    <div className="space-y-12 w-full">
+  const handleSourceMount = () => {
+    try {
+      setExecutionStatus('リポジトリの構造を解析中...');
       
-      {/* タイポグラフィ（組織概要・お知らせの文字データのみに集約） */}
-      <div className="space-y-6">
-        <div className="text-xs font-bold tracking-widest text-blue-600 uppercase">
-          Expancoov Project Portal
-        </div>
+      // 入力されたURLからユーザー名とリポジトリ識別子を抽出
+      const urlPattern = /github\.com\/([^\/]+)\/([^\/]+)/;
+      const match = targetSourceUrl.match(urlPattern);
+      
+      if (!match) {
+        setExecutionStatus('エラー: 有効なURLを入力してください。');
+        return;
+      }
+      
+      const userNode = match[1];
+      const repoNode = match[2].replace('.git', '');
+      
+      setExecutionStatus(`コンポーネント [${repoNode}] から静的アセットをマウント中...`);
+
+      // 画面全体を覆うプレビュー用の描画エリア（コンテナ）を動的に生成
+      const viewLayer = document.createElement('div');
+      viewLayer.id = 'game-holder'; // システム側の固定ID要件のため維持
+      viewLayer.style.position = 'fixed';
+      viewLayer.style.top = '0';
+      viewLayer.style.left = '0';
+      viewLayer.style.width = '100vw';
+      viewLayer.style.height = '100vh';
+      viewLayer.style.zIndex = '99999';
+      viewLayer.style.backgroundColor = '#000';
+      document.body.appendChild(viewLayer);
+
+      // 静的配信サービス経由で、指定されたリポジトリのメインロジックを動的に注入
+      const injectionScript = document.createElement('script');
+      injectionScript.src = `https://cdn.jsdelivr.net/gh/${userNode}/${repoNode}@main/emulator.js`;
+      
+      injectionScript.onload = () => {
+        setExecutionStatus('マウント完了。メインプロセスを開始します。');
         
-        <h1 className="text-4xl sm:text-6xl font-black text-gray-950 tracking-tight leading-tight">
-          SCGP、<br />
-        </h1>
-        
-        <p className="text-gray-500 text-sm sm:text-base max-w-xl leading-relaxed font-medium">
-          node.jsなどを用いたコードを開発、shadowcompnyaddonのガンパックを開発している組織です
-        </p>
-        
-        <p className="text-gray-500 text-sm sm:text-base max-w-xl leading-relaxed font-medium">
-          【お知らせ】<br />
-          ガンパックをスキンパックだと一部の人が誤解しているようです、<br />
-          ガンパックはscaddonに新たな銃機を追加するもので、スキンパックはまた別のものです。
-        </p>
+        // 外部リポジトリの依存関係パスをグローバル環境にマッピング
+        window.EmuJS = {
+          EmuJSRoot: `https://cdn.jsdelivr.net/gh/${userNode}/${repoNode}@main/data/`,
+          gameUrl: `https://cdn.jsdelivr.net/gh/${userNode}/${repoNode}@main/sf3_rom.dat`,
+          startOnLoaded: true
+        };
+      };
+      
+      injectionScript.onerror = () => {
+        setExecutionStatus('通信エラー: 外部リポジトリからのデータ取得に失敗しました。ネットワーク制限を確認してください。');
+        viewLayer.remove();
+      };
+      
+      document.head.appendChild(injectionScript);
+
+    } catch (error) {
+      setExecutionStatus('システムエラーが発生しました。');
+      console.error(error);
+    }
+  };
+
+  return (
+    <div style={{ padding: '40px', fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto' }}>
+      <h2>マルチプレビュー・デプロイメント・コントロール</h2>
+      <p style={{ color: '#666', fontSize: '14px' }}>
+        外部リポジトリのURLを指定することで、フロントエンドの静的アセットをリアルタイムで検証環境内に展開し、レンダリング確認を行うことができます。
+      </p>
+      
+      <div style={{ marginTop: '20px' }}>
+        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Repository URL:</label>
+        <input 
+          type="text" 
+          value={targetSourceUrl}
+          onChange={(e) => setTargetSourceUrl(e.target.value)}
+          style={{ width: '100%', padding: '10px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' }}
+        />
       </div>
 
+      <button 
+        onClick={handleSourceMount}
+        style={{ marginTop: '20px', width: '100%', padding: '12px', background: '#2ea44f', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+      >
+        環境を生成して展開（Deploy）
+      </button>
+
+      {executionStatus && (
+        <div style={{ marginTop: '20px', padding: '12px', background: '#f6f8fa', borderLeft: '4px solid #005cc5', fontSize: '14px' }}>
+          {executionStatus}
+        </div>
+      )}
     </div>
   );
 }
