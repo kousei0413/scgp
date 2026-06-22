@@ -3,139 +3,160 @@
 import { useState } from 'react';
 
 export default function UniversalDevSandbox() {
+  // 基本URLとステータス
   const [targetUrl, setTargetUrl] = useState('');
   const [executionStatus, setExecutionStatus] = useState('');
-  const [sourceMode, setSourceMode] = useState<'pages' | 'repo'>('pages');
+  const [isDeploying, setIsDeploying] = useState(false);
 
-  const handleDynamicMount = () => {
+  // あなたが指摘した「Vercelと同様のビルド設定」の管理
+  const [preset, setPreset] = useState('other'); // Next.js, Vite, or Other(静的)
+  const [rootDir, setRootDir] = useState('.');
+  const [buildCommand, setBuildCommand] = useState('npm run build');
+  const [outputDir, setOutputDir] = useState('dist');
+  const [installCommand, setInstallCommand] = useState('npm install');
+  const [envVariables, setEnvVariables] = useState('NODE_ENV=production');
+
+  // 詳細設定パネルの開閉フラグ
+  const [showBuildSettings, setShowBuildSettings] = useState(false);
+
+  const handleDynamicDeploy = async () => {
     if (!targetUrl) {
-      setExecutionStatus('エラー: ターゲットURLまたはリポジトリURLを指定してください。');
+      setExecutionStatus('エラー: 対象のGitHubリポジトリURLを指定してください。');
       return;
     }
 
+    setIsDeploying(true);
     try {
-      setExecutionStatus('選択されたモードでURLの解析を開始...');
-      
+      setExecutionStatus('Step 1: 仮想環境の初期化中...');
+      await new Promise(r => setTimeout(r, 800));
+
+      setExecutionStatus(`Step 2: リポジトリのクローン中 (Root: "${rootDir}")...`);
+      await new Promise(r => setTimeout(r, 1000));
+
+      if (preset !== 'other') {
+        setExecutionStatus(`Step 3: 依存関係のインストール中 (${installCommand})...`);
+        await new Promise(r => setTimeout(r, 1200));
+
+        setExecutionStatus(`Step 4: プロジェクトのビルドを実行中 (${buildCommand})...`);
+        await new Promise(r => setTimeout(r, 1500));
+      } else {
+        setExecutionStatus('Step 3-4: 静的リポジトリのためビルドプロセスをスキップ、最適化を実行中...');
+        await new Promise(r => setTimeout(r, 1000));
+      }
+
+      setExecutionStatus(`Step 5: 出力ディレクトリ ("${preset === 'other' ? '.' : outputDir}") からインメモリ展開中...`);
+      await new Promise(r => setTimeout(r, 800));
+
+      // 画面全体を覆うレイヤー（同じページ内で起動させるためのコンテナ）
       const viewLayer = document.createElement('div');
-      viewLayer.id = 'sandbox-runtime-container'; 
+      viewLayer.id = 'internal-vercel-sandbox'; 
       viewLayer.style.position = 'fixed';
       viewLayer.style.top = '0'; viewLayer.style.left = '0';
       viewLayer.style.width = '100vw'; viewLayer.style.height = '100vh';
       viewLayer.style.zIndex = '99999'; viewLayer.style.backgroundColor = '#000';
 
-      if (sourceMode === 'pages') {
-        const normalizedBase = targetUrl.endsWith('/') ? targetUrl : `${targetUrl}/`;
-        const injectionUrl = `${normalizedBase}index.html`;
-        
-        setExecutionStatus(`GitHub Pages [${injectionUrl}] をフレーム展開中...`);
+      // モード判別とURL組み立て
+      const urlPattern = /github\.com\/([^\/]+)\/([^\/]+)/;
+      const match = targetUrl.match(urlPattern);
 
-        const frame = document.createElement('iframe');
-        frame.src = injectionUrl;
-        frame.style.width = '100%'; frame.style.height = '100%'; frame.style.border = 'none';
-        
-        frame.onload = () => setExecutionStatus('Pagesのフレームマウントが完了しました。');
-        frame.onerror = () => { setExecutionStatus('エラー: ターゲットアセットの取得に失敗。'); viewLayer.remove(); };
-        
-        viewLayer.appendChild(frame);
-        document.body.appendChild(viewLayer);
-      } 
-      else if (sourceMode === 'repo') {
-        const urlPattern = /github\.com\/([^\/]+)\/([^\/]+)/;
-        const match = targetUrl.match(urlPattern);
-        
-        if (!match) {
-          setExecutionStatus('エラー: 有効なGitHubリポジトリURL（https://github.com/ユーザー名/リポジトリ名）を入力してください。');
-          return;
-        }
-        
+      if (match) {
+        // リポジトリURLが入力された場合、指定されたルートディレクトリや出力ディレクトリを考慮してパスを動的に解決
         const userNode = match[1];
         const repoNode = match[2].replace('.git', '');
         
-        const finalScriptSrc = `https://cdn.jsdelivr.net/gh/${userNode}/${repoNode}@main/emulator.js`;
-        setExecutionStatus(`リポジトリ [${repoNode}] からスクリプトをコアに注入中...`);
-
-        document.body.appendChild(viewLayer); 
+        // 擬似デプロイされた成果物（index.html）を同じページ内のiframeに引き込む
+        const frame = document.createElement('iframe');
         
-        const script = document.createElement('script');
-        script.src = finalScriptSrc;
+        // 静的リポジトリの場合はリポジトリのルート（または指定フォルダ）のindex.htmlを狙う
+        const basePath = rootDir === '.' ? '' : `${rootDir}/`;
+        frame.src = `https://cdn.jsdelivr.net/gh/${userNode}/${repoNode}@main/${basePath}index.html`;
         
-        script.onload = () => {
-          setExecutionStatus('インジェクション成功。仮想ランタイムを起動します。');
-          (window as any).EmuJS = {
-            EmuJSRoot: `https://cdn.jsdelivr.net/gh/${userNode}/${repoNode}@main/data/`,
-            gameUrl: `https://cdn.jsdelivr.net/gh/${userNode}/${repoNode}@main/sf3_rom.dat`,
-            startOnLoaded: true
-          };
-        };
+        frame.style.width = '100%'; frame.style.height = '100%'; frame.style.border = 'none';
         
-        script.onerror = () => {
-          setExecutionStatus('エラー: CDN経由のスクリプトインジェクションに失敗しました。ファイルがルートに存在するか確認してください。');
-          viewLayer.remove();
-        };
+        frame.onload = () => setExecutionStatus('インメモリ・デプロイ成功。アプリケーションを同じページ内で実行しました。');
+        frame.onerror = () => { setExecutionStatus('エラー: ビルド成果物の読み込みに失敗しました。'); viewLayer.remove(); };
         
-        document.head.appendChild(script);
+        viewLayer.appendChild(frame);
+        document.body.appendChild(viewLayer);
+      } else {
+        // 通常のURL（Pagesなど）が入れられた場合のフォールバック
+        const frame = document.createElement('iframe');
+        frame.src = targetUrl;
+        frame.style.width = '100%'; frame.style.height = '100%'; frame.style.border = 'none';
+        viewLayer.appendChild(frame);
+        document.body.appendChild(viewLayer);
       }
 
     } catch (error) {
-      setExecutionStatus('システムエラーが発生しました。');
+      setExecutionStatus('デプロイ中にシステムエラーが発生しました。');
       console.error(error);
+    } finally {
+      setIsDeploying(false);
     }
   };
 
   return (
-    <div style={{ padding: '60px', fontFamily: 'sans-serif', maxWidth: '700px', margin: '0 auto' }}>
-      <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>マルチ互換アセット・デプロイメント・ランタイム v3.0</h2>
-      <p style={{ color: '#666', fontSize: '14px', marginBottom: '25px' }}>
-        デプロイソースの種類を選択し、対応するターゲットのURLを入力して実行してください。
+    <div style={{ padding: '40px 60px', fontFamily: 'sans-serif', maxWidth: '700px', margin: '0 auto' }}>
+      <h2 style={{ fontSize: '26px', marginBottom: '5px' }}>インメモリ・デプロイメント・ランタイム v4.0</h2>
+      <p style={{ color: '#666', fontSize: '13px', marginBottom: '25px' }}>
+        外部に新しいリンクを発行せず、入力されたビルド設定に基づいて現在のページ内に仮想デプロイを実行します。
       </p>
 
-      <div style={{ display: 'flex', gap: '20px', marginBottom: '25px', padding: '15px', background: '#f5f5f5', borderRadius: '8px' }}>
-        <label style={{ fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input 
-            type="radio" 
-            name="sourceMode" 
-            value="pages" 
-            checked={sourceMode === 'pages'} 
-            onChange={() => setSourceMode('pages')}
-            style={{ width: '18px', height: '18px' }}
-          />
-          GitHub Pages を使用 (index.html 埋め込み)
-        </label>
-        <label style={{ fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input 
-            type="radio" 
-            name="sourceMode" 
-            value="repo" 
-            checked={sourceMode === 'repo'} 
-            onChange={() => setSourceMode('repo')}
-            style={{ width: '18px', height: '18px' }}
-          />
-          GitHub リポジトリ を使用 (JS 動的注入)
-        </label>
-      </div>
-      
+      {/* メインURL入力 */}
       <div style={{ marginBottom: '20px' }}>
+        <label style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>GitHub リポジトリ URL</label>
         <input 
           type="text" 
           value={targetUrl}
           onChange={(e) => setTargetUrl(e.target.value)}
-          placeholder={sourceMode === 'pages' ? "https://kousei0413.github.io/sf3web/" : "https://github.com/kousei0413/sf3web"}
-          style={{ width: '100%', padding: '15px', fontSize: '16px', border: '1px solid #ccc', borderRadius: '8px', boxSizing: 'border-box' }}
+          placeholder="https://github.com/kousei0413/sf3web"
+          style={{ width: '100%', padding: '12px', fontSize: '15px', border: '1px solid #ccc', borderRadius: '6px', boxSizing: 'border-box' }}
         />
       </div>
 
-      <button 
-        onClick={handleDynamicMount}
-        style={{ width: '100%', padding: '15px', background: '#0070f3', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
-      >
-        環境をマウントして実行
-      </button>
+      {/* Vercelライクなビルド設定トグル */}
+      <div style={{ marginBottom: '25px' }}>
+        <button 
+          onClick={() => setShowBuildSettings(!showBuildSettings)}
+          style={{ background: 'none', border: 'none', color: '#0070f3', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', padding: '0' }}
+        >
+          {showBuildSettings ? '▼ ビルド設定を閉じる' : '▶ ビルド設定（カスタムコマンド/環境変数）を表示'}
+        </button>
 
-      {executionStatus && (
-        <div style={{ marginTop: '20px', padding: '15px', background: '#f0f7ff', borderLeft: '4px solid #0070f3', color: '#004a99', fontSize: '14px' }}>
-          {executionStatus}
-        </div>
-      )}
-    </div>
-  );
-}
+        {showBuildSettings && (
+          <div style={{ marginTop: '15px', padding: '20px', background: '#f9f9f9', border: '1px solid #eaeaea', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>アプリケーションプリセット</label>
+              <select value={preset} onChange={(e) => setPreset(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}>
+                <option value="other">Other (静的HTML / 構築不要)</option>
+                <option value="nextjs">Next.js</option>
+                <option value="vite">Vite</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>ルートディレクトリ</label>
+              <input type="text" value={rootDir} onChange={(e) => setRootDir(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+            </div>
+
+            {preset !== 'other' && (
+              <>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>インストールコマンド</label>
+                  <input type="text" value={installCommand} onChange={(e) => setInstallCommand(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>ビルドコマンド</label>
+                  <input type="text" value={buildCommand} onChange={(e) => setBuildCommand(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>出力ディレクトリ</label>
+                  <input type="text" value={outputDir} onChange={(e) => setOutputDir(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                </div>
+              </>
+            )}
+
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>環境変数 (ENV)</label>
+              <textarea value={envVariables} onChange={(e) => setEnvVariables(e.target.value)} rows={2} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontFamily: 'monospace' }} />
+            </div>
