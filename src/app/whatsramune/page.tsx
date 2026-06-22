@@ -26,6 +26,7 @@ export default function Home() {
   
         </p>
         
+           <hr className="border-gray-250 my-6" />
         
         <p className="text-gray-500 text-sm sm:text-base max-w-xl leading-relaxed font-medium">
           【お知らせ】<br />
