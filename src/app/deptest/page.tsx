@@ -2,15 +2,15 @@
 
 import { useState } from 'react';
 
-// プリセットごとのデフォルト設定を定義
-const PRESET_DEFAULTS: Record<string, { install: string; build: string; output: string }> = {
-  other: { install: "npm install", build: "echo 'No build required'", output: "." },
-  nextjs: { install: "npm install", build: "next build", output: ".next" },
-  vite: { install: "npm install", build: "vite build", output: "dist" },
-  nuxt: { install: "npm install", build: "nuxt build", output: ".nuxt" },
-  sveltekit: { install: "npm install", build: "vite build", output: ".svelte-kit" },
-  astro: { install: "npm install", build: "astro build", output: "dist" },
-  cra: { install: "npm install", build: "react-scripts build", output: "build" },
+// プリセットごとの現実的なデフォルト設定（ブランチ名と、成果物の相対パス）
+const PRESET_DEFAULTS: Record<string, { branch: string; output: string }> = {
+  other: { branch: "main", output: "." },
+  nextjs: { branch: "gh-pages", output: "." }, 
+  vite: { branch: "gh-pages", output: "." },
+  nuxt: { branch: "gh-pages", output: "." },
+  sveltekit: { branch: "gh-pages", output: "." },
+  astro: { branch: "gh-pages", output: "." },
+  cra: { branch: "gh-pages", output: "." },
 };
 
 export default function UniversalDevSandbox() {
@@ -18,23 +18,21 @@ export default function UniversalDevSandbox() {
   const [executionStatus, setExecutionStatus] = useState('');
   const [isDeploying, setIsDeploying] = useState(false);
 
-  // Vercel準拠のビルドパラメータ状態
+  // 成果物フェッチと環境変数指定に完全特化した状態管理
   const [preset, setPreset] = useState('other'); 
+  const [branchName, setBranchName] = useState('main'); 
   const [rootDir, setRootDir] = useState('.');
-  const [installCommand, setInstallCommand] = useState('npm install');
-  const [buildCommand, setBuildCommand] = useState("echo 'No build required'");
-  const [outputDir, setOutputDir] = useState('.');
+  const [outputDir, setOutputDir] = useState('.'); 
   const [envVariables, setEnvVariables] = useState('NODE_ENV=production');
 
   const [showBuildSettings, setShowBuildSettings] = useState(false);
 
-  // プリセットが変更されたら、各コマンドと出力を自動切り替え
+  // プリセット変更時にブランチや出力パスを最適値に自動同期
   const handlePresetChange = (selectedPreset: string) => {
     setPreset(selectedPreset);
     const defaults = PRESET_DEFAULTS[selectedPreset];
     if (defaults) {
-      setInstallCommand(defaults.install);
-      setBuildCommand(defaults.build);
+      setBranchName(defaults.branch);
       setOutputDir(defaults.output);
     }
   };
@@ -58,41 +56,62 @@ export default function UniversalDevSandbox() {
     
     setIsDeploying(true);
     try {
-      setExecutionStatus(`$ ${installCommand}\n解析中: github.com/${userNode}/${repoNode} (Preset: ${preset.toUpperCase()})`);
-      await new Promise(r => setTimeout(r, 600));
+      setExecutionStatus(`[1/3] ターゲット解析中: github.com/${userNode}/${repoNode} (${preset.toUpperCase()})`);
+      await new Promise(r => setTimeout(r, 300));
 
+      // 環境変数のパース
       const envObj: Record<string, string> = {};
       envVariables.split('\n').forEach(line => {
         const [k, v] = line.split('=');
         if (k && v) envObj[k.trim()] = v.trim();
       });
 
-      setExecutionStatus(prev => `${prev}\n$ ${buildCommand}\nルートディレクトリ: "${rootDir}" 内のターゲットをコンパイル中...`);
+      // ルートディレクトリと成果物ディレクトリの結合パス作成
+      const pathSegments = [
+        rootDir !== '.' ? rootDir : '',
+        outputDir !== '.' ? outputDir : ''
+      ].filter(Boolean).join('/');
       
-      const cleanRoot = rootDir === '.' ? '' : `${rootDir}/`;
-      // 出力ディレクトリの設定（other以外の場合はoutputDirを擬似参照、静的の場合は直接ルートを狙う）
-      const targetIndexHtmlUrl = `https://cdn.jsdelivr.net/gh/${userNode}/${repoNode}@main/${cleanRoot}index.html`;
+      const cleanPath = pathSegments ? `${pathSegments}/` : '';
+      const targetBranch = branchName ? branchName : 'main';
+      const targetIndexHtmlUrl = `https://cdn.jsdelivr.net/gh/${userNode}/${repoNode}@${targetBranch}/${cleanPath}index.html`;
       
+      setExecutionStatus(prev => `${prev}\n[2/3] $ fetch ${targetIndexHtmlUrl}\n成果物HTMLを取得中...`);
+
       const response = await fetch(targetIndexHtmlUrl);
       if (!response.ok) {
-        throw new Error(`指定された設定（ルート: "${rootDir}" / 出力: "${outputDir}"）のパスに index.html が見つかりません。(Status: ${response.status})`);
+        throw new Error(
+          `成果物が見つかりません (Status: ${response.status})\n` +
+          `【確認】ブランチ名 [ ${targetBranch} ] または指定パス "${cleanPath}index.html" が正しいか確認してください。`
+        );
       }
       
       let rawHtml = await response.text();
-      setExecutionStatus(prev => `${prev}\n成果物検出: インメモリにビルドファイルをキャプチャしました。`);
+      setExecutionStatus(prev => `${prev}\n[3/3] 成果物検知。アセットルーティングのコンパイルを開始...`);
 
-      const envScript = `<script>window.process = { env: ${JSON.stringify(envObj)} };</script>`;
-      rawHtml = rawHtml.replace('<head>', `<head>${envScript}`);
-
-      const baseTag = `<base href="https://cdn.jsdelivr.net/gh/${userNode}/${repoNode}@main/${cleanRoot}">`;
+      const assetBaseUrl = `https://cdn.jsdelivr.net/gh/${userNode}/${repoNode}@${targetBranch}/${cleanPath}`;
+      
+      // 【ボロ1完全解決：Gemini2号の拡張正規表現】
+      // 大文字小文字、シングル/ダブルクォーテーション、イコール前後のスペースを完璧に網羅して置換
+      rawHtml = rawHtml.replace(/(src|href)\s*=\s*(["'])\/([^"']+)\2/gi, (match, p1, p2, p3) => {
+        return `${p1}=${p2}${assetBaseUrl}${p3}${p2}`;
+      });
+      
+      // 相対パス補完用の base タグ
+      const baseTag = `<base href="${assetBaseUrl}">`;
       rawHtml = rawHtml.replace('<head>', `<head>${baseTag}`);
 
-      setExecutionStatus(prev => `${prev}\n$ 仮想サーバーへのデプロイ完了。同一ページ内でランタイムを起動します。`);
-      await new Promise(r => setTimeout(r, 500));
+      // 環境変数の最優先差し込み（即時関数）
+      const envScript = `<script>(function(){window.process={env:${JSON.stringify(envObj)}};})();</script>`;
+      rawHtml = rawHtml.replace('<head>', `<head>${envScript}`);
+
+      setExecutionStatus(prev => `${prev}\nアセットの絶対パス解決および環境変数注入が完了。同じページ内で実行します。`);
+      await new Promise(r => setTimeout(r, 300));
 
       const blob = new Blob([rawHtml], { type: 'text/html' });
       const internalDeploymentUrl = URL.createObjectURL(blob);
 
+      // 同一ページ内に全画面で隠蔽展開
       const viewLayer = document.createElement('div');
       viewLayer.id = 'internal-vercel-sandbox'; 
       viewLayer.style.position = 'fixed';
@@ -108,7 +127,7 @@ export default function UniversalDevSandbox() {
       document.body.appendChild(viewLayer);
 
     } catch (error: any) {
-      setExecutionStatus(prev => `${prev}\n\n[BUILD ERROR] ${error.message}\n※静的配下でないファイルやビルド前のソースコードを直接動かす場合は、WebContainers等のブラウザLinux環境が必要です。`);
+      setExecutionStatus(prev => `${prev}\n\n[DEPLOY FAILED]\n${error.message}`);
       console.error(error);
     } finally {
       setIsDeploying(false);
@@ -117,11 +136,12 @@ export default function UniversalDevSandbox() {
 
   return (
     <div style={{ padding: '40px 60px', fontFamily: 'sans-serif', maxWidth: '700px', margin: '0 auto' }}>
-      <h2 style={{ fontSize: '26px', marginBottom: '5px' }}>インメモリ・デプロイメント・ランタイム v5.0</h2>
+      <h2 style={{ fontSize: '26px', marginBottom: '5px' }}>インメモリ・デプロイメント・ランタイム v7.0</h2>
       <p style={{ color: '#666', fontSize: '13px', marginBottom: '25px' }}>
-        各種アプリケーションプリセットを選択し、現在のページ内に仮想コンパイル環境を展開します。
+        GitHub上のビルド済み成果物を同一ページにマウントし、ルート相対パスを自動置換してシームレスに実行します。
       </p>
 
+      {/* メインURL入力欄 */}
       <div style={{ marginBottom: '20px' }}>
         <label style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>GitHub リポジトリ URL</label>
         <input 
@@ -133,63 +153,64 @@ export default function UniversalDevSandbox() {
         />
       </div>
 
+      {/* 設定セクション */}
       <div style={{ marginBottom: '25px' }}>
         <button 
           onClick={() => setShowBuildSettings(!showBuildSettings)}
           style={{ background: 'none', border: 'none', color: '#0070f3', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', padding: '0' }}
         >
-          {showBuildSettings ? '▼ ビルド設定を閉じる' : '▶ ビルド設定（フレームワーク・カスタムコマンド）を表示'}
+          {showBuildSettings ? '▼ ターゲットアセット設定を閉じる' : '▶ ターゲットアセット設定（ブランチ・パス・環境変数）を表示'}
         </button>
 
         {showBuildSettings && (
           <div style={{ marginTop: '15px', padding: '20px', background: '#f9f9f9', border: '1px solid #eaeaea', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>アプリケーションプリセット (Framework Preset)</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>ターゲット・プリセット (自動補完)</label>
               <select value={preset} onChange={(e) => handlePresetChange(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '14px' }}>
-                <option value="other">Other (静的HTML / 構築不要アセット)</option>
-                <option value="nextjs">Next.js</option>
-                <option value="vite">Vite</option>
-                <option value="nuxt">Nuxt.js</option>
-                <option value="sveltekit">SvelteKit</option>
-                <option value="astro">Astro</option>
-                <option value="cra">Create React App</option>
+                <option value="other">Other (静的HTML / mainブランチの直読み)</option>
+                <option value="nextjs">Next.js (gh-pages デプロイ後ブランチ)</option>
+                <option value="vite">Vite (gh-pages デプロイ後ブランチ)</option>
+                <option value="nuxt">Nuxt.js (gh-pages デプロイ後ブランチ)</option>
+                <option value="sveltekit">SvelteKit (gh-pages デプロイ後ブランチ)</option>
+                <option value="astro">Astro (gh-pages デプロイ後ブランチ)</option>
+                <option value="cra">Create React App (gh-pages デプロイ後ブランチ)</option>
               </select>
             </div>
 
+            {/* 【ボロ2完全解決】走らないビルドコマンド欄を全削除し、アセットの場所を指定する項目へ純化 */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>ルートディレクトリ (Root Directory)</label>
-              <input type="text" value={rootDir} onChange={(e) => setRootDir(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>対象ブランチ名 (Branch)</label>
+              <input type="text" value={branchName} onChange={(e) => setBranchName(e.target.value)} placeholder="main または gh-pages" style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontFamily: 'monospace' }} />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>インストールコマンド</label>
-              <input type="text" value={installCommand} onChange={(e) => setInstallCommand(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>ビルドコマンド (Build Command)</label>
-              <input type="text" value={buildCommand} onChange={(e) => setBuildCommand(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>出力ディレクトリ (Output Directory)</label>
-              <input type="text" value={outputDir} onChange={(e) => setOutputDir(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>プロジェクトのルートディレクトリ (リポジトリ内の対象フォルダ)</label>
+              <input type="text" value={rootDir} onChange={(e) => setRootDir(e.target.value)} placeholder="." style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>環境変数 (Environment Variables)</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>成果物ディレクトリ (Output Dir ※ブランチ直下なら「.」)</label>
+              <input type="text" value={outputDir} onChange={(e) => setOutputDir(e.target.value)} placeholder="." style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '5px' }}>注入する環境変数 (Environment Variables)</label>
               <textarea value={envVariables} onChange={(e) => setEnvVariables(e.target.value)} rows={2} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', fontFamily: 'monospace' }} />
             </div>
           </div>
         )}
       </div>
 
+      {/* 実行ボタン */}
       <button 
         onClick={handleDynamicDeploy}
         disabled={isDeploying}
         style={{ width: '100%', padding: '15px', background: isDeploying ? '#ccc' : '#000', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '16px', fontWeight: 'bold', cursor: isDeploying ? 'not-allowed' : 'pointer' }}
       >
-        {isDeploying ? '仮想環境ビルド中...' : '同一ページ内でデプロイ・実行'}
+        {isDeploying ? 'アセット解析・ルーティング置換中...' : '同一ページ内でデプロイ・実行'}
       </button>
 
+      {/* ログ出力コンソール */}
       {executionStatus && (
         <div style={{ marginTop: '20px', padding: '15px', background: '#1e1e1e', borderRadius: '6px', color: '#39ff14', fontFamily: 'monospace', fontSize: '13px', lineHeight: '1.5', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
           {executionStatus}
