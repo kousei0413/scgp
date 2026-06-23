@@ -215,6 +215,9 @@ export default function UniversalDevSandbox() {
         <div style={{ marginTop: '20px', padding: '15px', background: '#1e1e1e', borderRadius: '6px', color: '#39ff14', fontFamily: 'monospace', fontSize: '13px', lineHeight: '1.5', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
           {executionStatus}
         </div>
+      )}
+
+
 
 
 {/* ──────────────────────────────────────────────────────── */}
@@ -255,9 +258,12 @@ export default function UniversalDevSandbox() {
           <p>※ブラウザ内に完全なLinux環境（Node.jsカーネル）を展開して生ソース（.tsx / .ts）からリアルタイムにコンパイルを行う場合は、別途WebContainers API等の拡張が必要となります。</p>
         </div>
       </div>
-      {/*------------------------------------------------------*/}
+
+
+
       
-      )}
+
+      
     </div>
   );
 }
