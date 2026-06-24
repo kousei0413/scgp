@@ -148,7 +148,7 @@ export default function UniversalDevSandbox() {
           type="text" 
           value={targetUrl}
           onChange={(e) => setTargetUrl(e.target.value)}
-          placeholder="https://github.com/kousei0413/sf3web"
+          placeholder="https://github.com/userneme/repositoryneme"
           style={{ width: '100%', padding: '12px', fontSize: '15px', border: '1px solid #ccc', borderRadius: '6px', boxSizing: 'border-box' }}
         />
       </div>
